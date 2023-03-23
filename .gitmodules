@@ -1,0 +1,3 @@
+[submodule "mobility-database-catalogs"]
+	path = mobility-database-catalogs
+	url = https://github.com/MobilityData/mobility-database-catalogs.git
