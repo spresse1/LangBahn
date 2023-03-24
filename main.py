@@ -66,7 +66,7 @@ def get_gtfs_sources(outputdir="data", countries=None, active=True, force=False)
                     raise e
 
 def import_to_db(location, datadir="data", databasefile="merged.sqlite", 
-        boxes="boxes.sqlite", verbose=True):
+        verbose=True):
 
     files = glob(os.path.join(datadir, "*.zip"))
     files.sort()
@@ -77,7 +77,10 @@ def import_to_db(location, datadir="data", databasefile="merged.sqlite",
             pygtfs.append_feed(sched, zipfile)
         except Exception:
             traceback.print_exc()
-    
+
+def calculate(databasefile="merged.sqlite"):
+    sched = pygtfs.Schedule(databasefile)
+
     count = 0
     for stop in sched.stops:
         box = latlon_to_box(float(stop.stop_lat), float(stop.stop_lon))
@@ -155,5 +158,7 @@ if __name__ == "__main__":
         get_gtfs_sources(countries=["DE"])
     elif sys.argv[1] == "import":
         import_to_db("Germany")
+    elif sys.argv[1] == "calculate":
+        calculate()
     elif sys.argv[1] == "explore":
         explore()
