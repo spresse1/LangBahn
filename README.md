@@ -1,10 +1,12 @@
+This project is intended to find transit trips that go as far as possible in a fixed amount of time.
+
+Right now it's very rough, so I apologize for the lack of details.
+
+I'm trying to do development in the open with this one, see [this thread]()
+
 # Installation
 
-Initialize git submodules
-
-```shell
-$ git submodule init # todo: check correct
-```
+Detailed directions to com
 
 Install requirements:
 
@@ -12,11 +14,11 @@ Install requirements:
 $ pip install -r requirements.txt
 ```
 
-gtfspy reuires networkx1.10, but that's way too old. Force the issue:
+# Some implementation details
 
-$ pip install --upgrade --force networkx
+## Calculating nearby stops
 
-Memoizing distance in a snae way is important. Calculating if things are nearby 
+Memoizing distance in a sane way is important. Iterating through all stops to check which are nearby
 once costs 0.000263 seconds per stop:
 
 ```
