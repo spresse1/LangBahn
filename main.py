@@ -148,10 +148,28 @@ def explore(databasefile="merged.sqlite"):
     # print(f"Runtime: {runtime} seconds for {len(sched.stops)} stops")
     # print(f"or {runtime/len(sched.stops)} seconds per stop (remember this is n^2!)")
 
-    print(sched.stops[0])
-    for stop in get_neighbor_stops(sched, sched.stops[0]):
-        print(f"{stop}: {distance((sched.stops[0].stop_lat, sched.stops[0].stop_lon), (stop.stop_lat, stop.stop_lon)).km}")
-    import pdb; pdb.set_trace()
+    # print(sched.stops[0])
+    # for stop in get_neighbor_stops(sched, sched.stops[0]):
+    #     print(f"{stop}: {distance((sched.stops[0].stop_lat, sched.stops[0].stop_lon), (stop.stop_lat, stop.stop_lon)).km}")
+
+    # select feed_id, trip_id, arrival_time, departure_time, stop_id, stop_lat, 
+    # stop_lon from stop_times inner join stops on 
+    # stop_times.feed_id=stops.feed_id and stop_times.stop_id=stops.stop_id 
+    # order by feed_id asc, stop_times.trip_id asc, stop_times.stop_sequence asc
+    from sqlalchemy import and_
+    Stop = pygtfs.gtfs_entities.Stop
+    StopTime = pygtfs.gtfs_entities.StopTime
+
+    stoptimes = sched.stops_query.add_entity(StopTime).join(
+        StopTime,
+        and_(
+            StopTime.feed_id == Stop.feed_id,
+            StopTime.stop_id == Stop.stop_id
+        )
+    ).order_by(StopTime.feed_id, StopTime.trip_id, StopTime.stop_sequence)
+    for time in stoptimes:
+        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon})")
+
 
 if __name__ == "__main__":
     if sys.argv[1] == "download":
