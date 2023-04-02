@@ -95,6 +95,20 @@ def calculate(databasefile="merged.sqlite"):
     sched.session.flush()
     sched.session.commit()
 
+    from sqlalchemy import and_
+    Stop = pygtfs.gtfs_entities.Stop
+    StopTime = pygtfs.gtfs_entities.StopTime
+
+    stoptimes = sched.stops_query.add_entity(StopTime).join(
+        StopTime,
+        and_(
+            StopTime.feed_id == Stop.feed_id,
+            StopTime.stop_id == Stop.stop_id
+        )
+    ).order_by(StopTime.feed_id, StopTime.trip_id, StopTime.stop_sequence)
+    for time in stoptimes:
+        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon})")
+
 
 def latlon_to_box(latitude:float, longitude:float) -> int:
     latpart = int((latitude + 90) * 10 )
@@ -156,19 +170,6 @@ def explore(databasefile="merged.sqlite"):
     # stop_lon from stop_times inner join stops on 
     # stop_times.feed_id=stops.feed_id and stop_times.stop_id=stops.stop_id 
     # order by feed_id asc, stop_times.trip_id asc, stop_times.stop_sequence asc
-    from sqlalchemy import and_
-    Stop = pygtfs.gtfs_entities.Stop
-    StopTime = pygtfs.gtfs_entities.StopTime
-
-    stoptimes = sched.stops_query.add_entity(StopTime).join(
-        StopTime,
-        and_(
-            StopTime.feed_id == Stop.feed_id,
-            StopTime.stop_id == Stop.stop_id
-        )
-    ).order_by(StopTime.feed_id, StopTime.trip_id, StopTime.stop_sequence)
-    for time in stoptimes:
-        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon})")
 
 
 if __name__ == "__main__":
