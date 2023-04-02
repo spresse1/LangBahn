@@ -10,6 +10,8 @@ import database
 from tempfile import TemporaryFile
 from glob import glob
 from geopy.distance import distance
+from sqlalchemy import and_
+
 
 CSV_URL="https://bit.ly/catalogs-csv"
 
@@ -95,7 +97,6 @@ def calculate(databasefile="merged.sqlite"):
     sched.session.flush()
     sched.session.commit()
 
-    from sqlalchemy import and_
     Stop = pygtfs.gtfs_entities.Stop
     StopTime = pygtfs.gtfs_entities.StopTime
 
@@ -106,7 +107,40 @@ def calculate(databasefile="merged.sqlite"):
             StopTime.stop_id == Stop.stop_id
         )
     ).order_by(StopTime.feed_id, StopTime.trip_id, StopTime.stop_sequence)
+
+    # Trip-level variables
+    currentfeed = None
+    currenttrip = None
+    starttime = None
+    cumdistance = 0
+    previousstop = None
+
     for time in stoptimes:
+        # Calculate distance from previous stop, ignoring if this is the first stop
+        # Do this calculation first because we want this distance if we are at the end of a line
+        if previousstop is not None:
+            pass
+            newlatlon = (time[0].stop_lat, time[0].stop_lon)
+            oldlatlon = (previousstop[0].stop_lat, previousstop[0].stop_lon)
+            cumdistance += distance(oldlatlon, newlatlon).km
+
+        # Check if this starts a new trip, store if so
+        if time[1].feed_id != currentfeed or time[1].trip_id != currenttrip:
+            if currenttrip is not None:
+                endtime = previousstop[1].arrival_time
+                # if endtime is None:
+                #     endtime = previousstop[1].departure_time
+                # Only record if this was an actual trip
+                print(f"feed: {currentfeed}, trip: {currenttrip}, time: {endtime}, {starttime}, {endtime-starttime}, distance: {cumdistance}")
+            
+            # Reset stored state for next trip
+            currentfeed = time[1].feed_id
+            currenttrip = time[1].trip_id
+            starttime = time[1].departure_time
+            cumdistance = 0
+            previousstop = None
+        previousstop = time
+
         print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon})")
 
 
@@ -170,7 +204,6 @@ def explore(databasefile="merged.sqlite"):
     # stop_lon from stop_times inner join stops on 
     # stop_times.feed_id=stops.feed_id and stop_times.stop_id=stops.stop_id 
     # order by feed_id asc, stop_times.trip_id asc, stop_times.stop_sequence asc
-
 
 if __name__ == "__main__":
     if sys.argv[1] == "download":
