@@ -115,6 +115,7 @@ def calculate(databasefile="merged.sqlite"):
     starttime = None
     cumdistance = 0
     previousstop = None
+    count = 0
 
     for time in stoptimes:
         # Check if this starts a new trip, store if so
@@ -125,6 +126,11 @@ def calculate(databasefile="merged.sqlite"):
                 #     endtime = previousstop[1].departure_time
                 # Only record if this was an actual trip
                 print(f"feed: {currentfeed}, trip: {currenttrip}, time: {endtime}, {starttime}, {endtime-starttime}, distance: {cumdistance}")
+                sched.session.add(database.TripData(
+                    trip_id=currenttrip,
+                    time=endtime-starttime,
+                    distance=cumdistance
+                ))
             
             # Reset stored state for next trip
             currentfeed = time[1].feed_id
@@ -142,8 +148,17 @@ def calculate(databasefile="merged.sqlite"):
             cumdistance += distance(oldlatlon, newlatlon).km
             
         previousstop = time
+        count += 1
 
-        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon}), distance: {cumdistance} in {time[1].arrival_time-starttime}")
+        if count % 5000 == 0:
+            sched.session.flush()
+            print(".", end="")
+
+    # Put the last items in the database
+    sched.session.flush()
+    sched.session.commit()
+
+        #print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon}), distance: {cumdistance} in {time[1].arrival_time-starttime}")
 
 
 def latlon_to_box(latitude:float, longitude:float) -> int:
