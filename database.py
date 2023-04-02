@@ -21,7 +21,19 @@ class BoxStation(Base):
     def __repr__(self):
         return '<BoxStation %s: %s in %d>' % (self.box_id, self.stop_id, self.box_id)
 
-modules = [ BoxStation ]
+class TripData(Base):
+    __tablename__ = "_tripdata"
+    _plural_name_ = "tripdata"
+    trip_id = Column(Unicode, ForeignKey('trips.trip_id'), index=True)
+    time = Column(Interval)
+    distance = Column(Float)
+    tripdata_id = Column(Integer, primary_key=True)
+    id = synonym('tripdata_id')
+
+    def __repr__(self):
+        return '<TripData %s: %s in %d>' % (self.trip_id, self.distance, self.time)
+
+modules = [ BoxStation, TripData ]
 
 def ducktype_environment(pygtfs):
     # Awful hack part 2: add custom tables to the pygtfs sched object:
