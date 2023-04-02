@@ -154,6 +154,13 @@ def calculate(databasefile="merged.sqlite"):
             sched.session.flush()
             print(".", end="")
 
+    print(f"feed: {currentfeed}, trip: {currenttrip}, time: {endtime}, {starttime}, {endtime-starttime}, distance: {cumdistance}")
+    sched.session.add(database.TripData(
+        trip_id=currenttrip,
+        time=endtime-starttime,
+        distance=cumdistance
+    ))
+
     # Put the last items in the database
     sched.session.flush()
     sched.session.commit()
