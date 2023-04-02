@@ -97,6 +97,7 @@ def calculate(databasefile="merged.sqlite"):
     sched.session.flush()
     sched.session.commit()
 
+    # Start code for calculating distances and times.
     Stop = pygtfs.gtfs_entities.Stop
     StopTime = pygtfs.gtfs_entities.StopTime
 
@@ -116,14 +117,6 @@ def calculate(databasefile="merged.sqlite"):
     previousstop = None
 
     for time in stoptimes:
-        # Calculate distance from previous stop, ignoring if this is the first stop
-        # Do this calculation first because we want this distance if we are at the end of a line
-        if previousstop is not None:
-            pass
-            newlatlon = (time[0].stop_lat, time[0].stop_lon)
-            oldlatlon = (previousstop[0].stop_lat, previousstop[0].stop_lon)
-            cumdistance += distance(oldlatlon, newlatlon).km
-
         # Check if this starts a new trip, store if so
         if time[1].feed_id != currentfeed or time[1].trip_id != currenttrip:
             if currenttrip is not None:
@@ -139,9 +132,18 @@ def calculate(databasefile="merged.sqlite"):
             starttime = time[1].departure_time
             cumdistance = 0
             previousstop = None
+        
+        # Calculate distance from previous stop, ignoring if this is the first stop
+        # Do this calculation first because we want this distance if we are at the end of a line
+        if previousstop is not None:
+            pass
+            newlatlon = (time[0].stop_lat, time[0].stop_lon)
+            oldlatlon = (previousstop[0].stop_lat, previousstop[0].stop_lon)
+            cumdistance += distance(oldlatlon, newlatlon).km
+            
         previousstop = time
 
-        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon})")
+        print(f"feed: {time[1].feed_id}, trip: {time[1].trip_id}, stop: {time[1].stop_sequence}, departs: {time[1].departure_time} from {time[0].stop_name} ({time[0].stop_lat},{time[0].stop_lon}), distance: {cumdistance} in {time[1].arrival_time-starttime}")
 
 
 def latlon_to_box(latitude:float, longitude:float) -> int:
