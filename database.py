@@ -13,7 +13,8 @@ Base = pygtfs.schedule.Base
 class BoxStation(Base):
     __tablename__ = '_boxstation'
     _plural_name_ = 'boxstations'
-    stop_id = Column(Unicode, ForeignKey('stops.stop_id'))
+    stop_id = Column(Unicode, ForeignKey('stops.stop_id'), index=True)
+    feed_id = Column(Unicode, ForeignKey('stops.feed_id'), index=True)
     box_id = Column(Integer, index=True)
     boxstation_id = Column(Integer, primary_key=True)
     id = synonym('boxstation_id')
@@ -25,6 +26,7 @@ class TripData(Base):
     __tablename__ = "_tripdata"
     _plural_name_ = "tripdata"
     trip_id = Column(Unicode, ForeignKey('trips.trip_id'), index=True)
+    feed_id = Column(Unicode, ForeignKey('trips.feed_id'), index=True)
     time = Column(Interval)
     distance = Column(Float)
     tripdata_id = Column(Integer, primary_key=True)
