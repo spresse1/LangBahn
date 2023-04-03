@@ -96,6 +96,18 @@ def import_to_db(location, datadir="data", databasefile="merged.sqlite",
         except Exception:
             traceback.print_exc()
 
+def stop_distance(one, two):
+    onelatlon = (one.stop_lat, one.stop_lon)
+    twolatlon = (two.stop_lat, two.stop_lon)
+    return distance(onelatlon, twolatlon).km
+
+def stop_by_feed_and_id(sched, feed, stop):
+    return sched.stops_query.where(
+            pygtfs.gtfs_entities.Stop.stop_id == stop
+        ).where(
+            pygtfs.gtfs_entities.Stop.feed_id == feed
+        ).one()
+
 def calculate(databasefile="merged.sqlite"):
     sched = pygtfs.Schedule(databasefile)
 
@@ -104,7 +116,7 @@ def calculate(databasefile="merged.sqlite"):
         box = latlon_to_box(float(stop.stop_lat), float(stop.stop_lon))
 
         sched.session.add(database.BoxStation(
-            stop_id=stop.stop_id, box_id=box))
+            stop_id=stop.stop_id, box_id=box, feed_id=stop.feed_id))
         count += 1
 
         if count % 5000 == 0:
@@ -144,6 +156,7 @@ def calculate(databasefile="merged.sqlite"):
                 print(f"feed: {currentfeed}, trip: {currenttrip}, time: {endtime}, {starttime}, {endtime-starttime}, distance: {cumdistance}")
                 sched.session.add(database.TripData(
                     trip_id=currenttrip,
+                    feed_id=currentfeed,
                     time=endtime-starttime,
                     distance=cumdistance
                 ))
@@ -158,10 +171,7 @@ def calculate(databasefile="merged.sqlite"):
         # Calculate distance from previous stop, ignoring if this is the first stop
         # Do this calculation first because we want this distance if we are at the end of a line
         if previousstop is not None:
-            pass
-            newlatlon = (time[0].stop_lat, time[0].stop_lon)
-            oldlatlon = (previousstop[0].stop_lat, previousstop[0].stop_lon)
-            cumdistance += distance(oldlatlon, newlatlon).km
+            cumdistance += stop_distance(time[0], previousstop[0])
             
         previousstop = time
         count += 1
@@ -207,13 +217,18 @@ def get_neighbor_boxes(box:int):
 
     return [ ((lat + x) % 1800 ) * 10000 + ((lon + y) % 3600 ) for x, y in mods ]
 
-def get_neighbor_stops(sched, stop):
+def get_neighbor_stops(sched, stop, maxDistance=None):
     box = latlon_to_box(stop.stop_lat, stop.stop_lon)
     boxes = get_neighbor_boxes(box)
 
     results = []
     for res in sched.boxstations_query.where(database.BoxStation.box_id.in_(boxes)):
-        results += sched.stops_by_id(res.stop_id)
+        thisStop = stop_by_feed_and_id(sched, res.feed_id, res.stop_id)
+        if maxDistance is not None:
+            if stop_distance(stop, thisStop) < maxDistance:
+                results += [ thisStop ]
+        else:
+            results += [ thisStop ]
     
     return results
 
@@ -260,6 +275,13 @@ def explore(databasefile="merged.sqlite"):
     print("Done")
     from datetime import datetime
     start=datetime.now()
+
+    print(sched.stops_by_id(420))
+    for stop in get_neighbor_stops(sched, sched.stops_by_id(420)[0]):
+        print(stop)
+    print("Within 300 meters:")
+    for stop in get_neighbor_stops(sched, sched.stops_by_id(420)[0], .3):
+        print(stop)
 
     import pdb; pdb.set_trace()
 
