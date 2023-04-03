@@ -249,6 +249,7 @@ def find_trip(databasefile="merged.sqlite"):
     parser.add_argument("end_time", action="store")
     parser.add_argument("start_stop", action="store")
     parser.add_argument("trip_time", action="store")
+    parser.add_argument("--max-transfer-distance", action="store", type=float, default=0.5)
     args = parser.parse_args(sys.argv[2:])
 
     # Parse times into useful things
