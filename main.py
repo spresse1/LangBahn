@@ -9,6 +9,9 @@ import pygtfs
 import database
 import queuelib
 import pickle
+import argparse
+import datetime
+import sqlalchemy
 from tempfile import TemporaryFile
 from glob import glob
 from geopy.distance import distance
@@ -214,6 +217,41 @@ def get_neighbor_stops(sched, stop):
     
     return results
 
+def find_transfers(stop, start_time, end_time):
+    """
+    Returns a list of departing trains at the requested station in the requested
+    time window.
+    """
+    print(stop, start_time, end_time)
+
+def find_trip(databasefile="merged.sqlite"):
+    sched = pygtfs.Schedule(databasefile)
+    
+    parser = argparse.ArgumentParser(
+        description="LangBahn finds the longest possible train trip in a certain period of time",
+    )
+    parser.add_argument("start_time", action="store")
+    parser.add_argument("end_time", action="store")
+    parser.add_argument("start_stop", action="store")
+    parser.add_argument("trip_time", action="store")
+    args = parser.parse_args(sys.argv[2:])
+
+    # Parse times into useful things
+    start_time = datetime.datetime.fromisoformat(args.start_time)
+    end_time = datetime.datetime.fromisoformat(args.end_time)
+
+    # Find the station by name
+    try:
+        start_stop = sched.stops_query.where(pygtfs.gtfs_entities.Stop.stop_name == args.start_stop).one()
+    except sqlalchemy.exc.NoResultFound:
+        print(f"Unable to find a stop named {args.start_stop}!")
+        return
+
+    trip_time = datetime.timedelta(hours=int(args.trip_time))
+
+    trips = find_transfers(start_stop, start_time, end_time)
+    
+
 def explore(databasefile="merged.sqlite"):
     sched = pygtfs.Schedule(databasefile)
     for row in sched.stops_query.where(pygtfs.gtfs_entities.Stop.stop_name.contains("Stuttgart")):
@@ -222,14 +260,6 @@ def explore(databasefile="merged.sqlite"):
     print("Done")
     from datetime import datetime
     start=datetime.now()
-
-    pq = PriorityQueue()
-
-    pq.push(1, "test")
-    pq.push(2, {"a": "b"})
-
-    print(pq.pop())
-    print(pq.pop())
 
     import pdb; pdb.set_trace()
 
@@ -240,5 +270,7 @@ if __name__ == "__main__":
         import_to_db("Germany")
     elif sys.argv[1] == "calculate":
         calculate()
+    elif sys.argv[1] == "find_trip":
+        find_trip()
     elif sys.argv[1] == "explore":
         explore()
