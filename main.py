@@ -7,6 +7,8 @@ import requests
 import traceback
 import pygtfs
 import database
+import queuelib
+import pickle
 from tempfile import TemporaryFile
 from glob import glob
 from geopy.distance import distance
@@ -210,24 +212,16 @@ def explore(databasefile="merged.sqlite"):
     from datetime import datetime
     start=datetime.now()
 
-    # root = sched.stops[0]
+    qfactory = lambda priority: queuelib.FifoDiskQueue('queues/queue-dir-%s' % priority)
+    pq = queuelib.PriorityQueue(qfactory)
 
-    # for stop in sched.stops:
-    #     distance((root.stop_lat, root.stop_lon), (stop.stop_lat, stop.stop_lon))
+    pq.push(pickle.dumps("test"), 1)
+    pq.push(pickle.dumps({"a": "b"}), 2)
 
-    # end = datetime.now()
-    # runtime = end-start
-    # print(f"Runtime: {runtime} seconds for {len(sched.stops)} stops")
-    # print(f"or {runtime/len(sched.stops)} seconds per stop (remember this is n^2!)")
+    print(pickle.loads(pq.pop()))
+    print(pickle.loads(pq.pop()))
 
-    # print(sched.stops[0])
-    # for stop in get_neighbor_stops(sched, sched.stops[0]):
-    #     print(f"{stop}: {distance((sched.stops[0].stop_lat, sched.stops[0].stop_lon), (stop.stop_lat, stop.stop_lon)).km}")
-
-    # select feed_id, trip_id, arrival_time, departure_time, stop_id, stop_lat, 
-    # stop_lon from stop_times inner join stops on 
-    # stop_times.feed_id=stops.feed_id and stop_times.stop_id=stops.stop_id 
-    # order by feed_id asc, stop_times.trip_id asc, stop_times.stop_sequence asc
+    import pdb; pdb.set_trace()
 
 if __name__ == "__main__":
     if sys.argv[1] == "download":
