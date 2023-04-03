@@ -21,6 +21,17 @@ CSV_URL="https://bit.ly/catalogs-csv"
 # for details on how this is done
 database.ducktype_environment(pygtfs)
 
+class PriorityQueue():
+    def __init__(self, dirname='queues/queue-dir'):
+        qfactory = lambda priority: queuelib.FifoDiskQueue(f'{dirname}-%s' % priority)
+        self.pq = queuelib.PriorityQueue(qfactory)
+
+    def push(self, priority, object):
+        self.pq.push(pickle.dumps(object, priority))
+    
+    def pop(self):
+        return pickle.loads(self.pq.pop())
+
 def get_gtfs_sources(outputdir="data", countries=None, active=True, force=False):
     r = requests.get(CSV_URL)
     r.encoding = 'utf-8'
@@ -212,14 +223,13 @@ def explore(databasefile="merged.sqlite"):
     from datetime import datetime
     start=datetime.now()
 
-    qfactory = lambda priority: queuelib.FifoDiskQueue('queues/queue-dir-%s' % priority)
-    pq = queuelib.PriorityQueue(qfactory)
+    pq = PriorityQueue()
 
-    pq.push(pickle.dumps("test"), 1)
-    pq.push(pickle.dumps({"a": "b"}), 2)
+    pq.push(1, "test")
+    pq.push(2, {"a": "b"})
 
-    print(pickle.loads(pq.pop()))
-    print(pickle.loads(pq.pop()))
+    print(pq.pop())
+    print(pq.pop())
 
     import pdb; pdb.set_trace()
 
