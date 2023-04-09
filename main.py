@@ -241,6 +241,7 @@ def find_transfers(sched, stop, start_time, end_time):
     StopTime = pygtfs.gtfs_entities.StopTime
     Trip = pygtfs.gtfs_entities.Trip
     Service = pygtfs.gtfs_entities.Service
+    ServiceException = pygtfs.gtfs_entities.ServiceException
 
     trips = sched.stop_times_query.add_entity(Trip).join(
         Trip,
@@ -273,7 +274,20 @@ def find_transfers(sched, stop, start_time, end_time):
             # check if the date we're checking is valid for this trip
             if trip[2].start_date <= date <= trip[2].end_date:
                 # Next, check if this trip runs on this day
-                if getattr(trip[2], days[date.weekday()]):
+                # First, we check for exceptions
+                exceptions = sched.service_exceptions_query.where(
+                    and_(
+                        ServiceException.feed_id == trip[0].feed_id,
+                        ServiceException.service_id == trip[1].service_id,
+                        ServiceException.date == date
+                    )
+                ).all()
+
+                if len(exceptions) > 0 and exceptions[0].exception_type == 2:
+                    continue # No service on this day
+                if getattr(trip[2], days[date.weekday()]) or len(exceptions) > 0:
+                    # Exceptions greater than 0 at this point means service 
+                    # added for this date.
                     # Now we need a date and time for the actual departure. The 
                     # only way to get this is to merge the current date with
                     # the listed departure time.
