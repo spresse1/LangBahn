@@ -260,8 +260,31 @@ def find_transfers(sched, stop, start_time, end_time):
             StopTime.stop_id == stop.stop_id
         )
     )
-    for trip in trips:
-        print(trip)
+
+    
+    # first, filter out trips that don;t overlap with our time period
+    ret_trips = []
+    date = start_time.date()
+    end_date = end_time.date()
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    while date <= end_date:
+        for trip in trips:
+            #print(trip[2].start_date, trip[2].end_date, trip[2].monday)
+            # check if the date we're checking is valid for this trip
+            if trip[2].start_date <= date <= trip[2].end_date:
+                # Next, check if this trip runs on this day
+                if getattr(trip[2], days[date.weekday()]):
+                    # Now we need a date and time for the actual departure. The 
+                    # only way to get this is to merge the current date with
+                    # the listed departure time.
+                    dtime = datetime.datetime.combine(
+                        date, datetime.datetime.min.time()
+                    ) + trip[0].departure_time
+                    # Now we can check that this is within our window
+                    if start_time <= dtime <= end_time:
+                        ret_trips += [ trip ]
+        date = date + datetime.timedelta(days=1)
+
     return trips
 
 def find_trip(databasefile="merged.sqlite"):
@@ -283,7 +306,7 @@ def find_trip(databasefile="merged.sqlite"):
 
     # Find the station by name
     try:
-        start_stop = sched.stops_query.where(pygtfs.gtfs_entities.Stop.stop_name == args.start_stop).one()
+        start_stop = sched.stops_query.where(pygtfs.gtfs_entities.Stop.stop_name == args.start_stop)[0]
     except sqlalchemy.exc.NoResultFound:
         print(f"Unable to find a stop named {args.start_stop}!")
         return
@@ -293,7 +316,7 @@ def find_trip(databasefile="merged.sqlite"):
     neighbors = get_neighbor_stops(sched, start_stop, args.max_transfer_distance)
     
     trips = []
-    for neighbor in neighbors:
+    for neighbor in [neighbors[0]]:
         # Find all possible trips from nearby stations
         trips += find_transfers(sched, start_stop, start_time, end_time)
     
