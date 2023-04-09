@@ -232,12 +232,37 @@ def get_neighbor_stops(sched, stop, maxDistance=None):
     
     return results
 
-def find_transfers(stop, start_time, end_time):
+def find_transfers(sched, stop, start_time, end_time):
     """
     Returns a list of departing trains at the requested station in the requested
     time window.
     """
     print(stop, start_time, end_time)
+    StopTime = pygtfs.gtfs_entities.StopTime
+    Trip = pygtfs.gtfs_entities.Trip
+    Service = pygtfs.gtfs_entities.Service
+
+    trips = sched.stop_times_query.add_entity(Trip).join(
+        Trip,
+        and_(
+            StopTime.feed_id == Trip.feed_id,
+            StopTime.trip_id == Trip.trip_id
+        )
+    ).add_entity(Service).join(
+        Service,
+        and_(
+            Trip.feed_id == Service.feed_id,
+            Trip.service_id == Service.service_id
+        )
+    ).where(
+        and_(
+            StopTime.feed_id == stop.feed_id,
+            StopTime.stop_id == stop.stop_id
+        )
+    )
+    for trip in trips:
+        print(trip)
+    return trips
 
 def find_trip(databasefile="merged.sqlite"):
     sched = pygtfs.Schedule(databasefile)
@@ -265,7 +290,12 @@ def find_trip(databasefile="merged.sqlite"):
 
     trip_time = datetime.timedelta(hours=int(args.trip_time))
 
-    trips = find_transfers(start_stop, start_time, end_time)
+    neighbors = get_neighbor_stops(sched, start_stop, args.max_transfer_distance)
+    
+    trips = []
+    for neighbor in neighbors:
+        # Find all possible trips from nearby stations
+        trips += find_transfers(sched, start_stop, start_time, end_time)
     
 
 def explore(databasefile="merged.sqlite"):
